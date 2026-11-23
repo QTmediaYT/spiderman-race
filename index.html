@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tap Sprint: Người Nhện vs Siêu Anh Hùng</title>
+  <!-- BẮT BUỘC: Tải YouTube Playables SDK trước bất kỳ mã trò chơi nào -->
+  <script src="https://www.youtube.com/game_api/v1"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090d16;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #f8fafc;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Thanh thông tin trên cùng (HUD) */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(9, 13, 22, 0.9) 0%, rgba(9, 13, 22, 0) 100%);
+      pointer-events: none;
+    }
+
+    .hud-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      pointer-events: auto;
+    }
+
+    .pill {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(4px);
+    }
+
+    .pill span.val {
+      color: #38bdf8;
+    }
+
+    .pill.gold span.val {
+      color: #fbbf24;
+    }
+
+    .pill.red span.val {
+      color: #f87171;
+    }
+
+    .pill-btn {
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.15s ease;
+    }
+
+    .pill-btn:active {
+      transform: scale(0.94);
+    }
+
+    .env-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: inline-block;
+    }
+
+    .env-dot.local {
+      background: #f59e0b;
+    }
+
+    /* Canvas đồ họa 2D */
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      flex: 1;
+    }
+
+    /* Khu vực điều khiển bấm chạy & thanh nhịp độ */
+    #controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: min(92vw, 440px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .combo-wrap {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 999px;
+      padding: 3px;
+      position: relative;
+      height: 22px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    #comboFill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4, #f59e0b, #ef4444);
+      transition: width 0.08s linear;
+    }
+
+    #comboLabel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+    }
+
+    #tapBtn {
+      width: 100%;
+      height: 76px;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 22px;
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 65%, #1d4ed8 100%);
+      color: #ffffff;
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 8px 0 #1e3a8a, 0 14px 26px rgba(0, 0, 0, 0.55);
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+
+    #tapBtn:active, #tapBtn.pressed {
+      transform: translateY(5px);
+      box-shadow: 0 3px 0 #1e3a8a, 0 0 22px rgba(239, 68, 68, 0.85);
+    }
+
+    #tapBtn.web-rush {
+      background: linear-gradient(180deg, #38bdf8 0%, #ef4444 55%, #1d4ed8 100%);
+      border-color: #fde047;
+      box-shadow: 0 8px 0 #1e3a8a, 0 0 26px rgba(56, 189, 248, 0.9);
+    }
+
+    #hintText {
+      font-size: 12px;
+      color: #e2e8f0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      text-align: center;
+    }
+
+    /* Hộp thoại lớp phủ */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: rgba(9, 13, 22, 0.8);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .card {
+      width: min(94vw, 400px);
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 26px;
+      padding: 22px 18px;
+      text-align: center;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65);
+    }
+
+    .badge-stage {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .card h1 {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #f87171, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card p.sub {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+
+    .versus-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+
+    .fighter-tag {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .fighter-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .fighter-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .fighter-role {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .vs-badge {
+      font-size: 16px;
+      font-weight: 900;
+      color: #fbbf24;
+      padding: 4px 8px;
+    }
+
+    .stats-box {
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #94a3b8;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 15px;
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #991b1b;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #991b1b;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 14px;
+      background: rgba(56, 189, 248, 0.14);
+      color: #7dd3fc;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #toastMsg {
+      position: absolute;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid #38bdf8;
+      color: #f8fafc;
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+    }
+
+    #toastMsg.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Thanh trạng thái trên cùng -->
+    <div id="hud">
+      <div class="hud-group">
+        <div class="pill red">🏁 <span id="hudStageLabel">Màn:</span> <span class="val" id="hudStage">1</span></div>
+        <div class="pill gold">🏆 <span id="hudScoreLabel">Điểm:</span> <span class="val" id="hudScore">0</span></div>
+        <div class="pill">⭐ <span id="hudMaxStageLabel">Kỷ lục màn:</span> <span class="val" id="hudMaxStage">1</span></div>
+      </div>
+      <div class="hud-group">
+        <button class="pill pill-btn" id="audioToggleBtn" type="button" title="Bật / Tắt âm thanh">
+          <span id="audioIcon">🔊</span> <span id="hudAudio">ON</span>
+        </button>
+        <div class="pill" title="Môi trường chạy">
+          <span class="env-dot" id="envDot"></span>
+          <span id="envLabel">YT</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="toastMsg"></div>
+
+    <!-- Màn hình vẽ đường đua thành phố siêu anh hùng -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Khu vực thanh combo & nút bấm chạy -->
+    <div id="controls">
+      <div class="combo-wrap">
+        <div id="comboFill"></div>
+        <div id="comboLabel">🕸️ NHỊP TƠ NHỆN: 0%</div>
+      </div>
+      <button id="tapBtn" type="button">🕸️ BẮN TƠ CHẠY! (TAP)</button>
+      <div id="hintText">Chạm liên tục màn hình / nút bấm (hoặc phím Space / →) để Người Nhện bứt tốc!</div>
+    </div>
+
+    <!-- Màn hình Bắt đầu / Chuẩn bị vào màn -->
+    <div id="startOverlay" class="overlay">
+      <div class="card">
+        <div class="badge-stage" id="startStageBadge">VÒNG 1 • ĐƯỜNG ĐUA 100M</div>
+        <h1 id="titleText">NGƯỜI NHỆN ĐUA TỐC ĐỘ</h1>
+        <p class="sub" id="descText">Chạm thật nhanh và đều tay để kích hoạt Phóng Tơ Nhện đánh bại các siêu anh hùng!</p>
+
+        <div class="versus-box">
+          <div class="fighter-tag">
+            <div class="fighter-avatar" style="background: linear-gradient(135deg, #ef4444, #1d4ed8);">🕷️</div>
+            <div class="fighter-name" id="spideyCardName">Người Nhện</div>
+            <div class="fighter-role" id="youRoleLabel">Bạn</div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="fighter-tag">
+            <div class="fighter-avatar" id="botPreviewAvatar" style="background: #dc2626;">🤖</div>
+            <div class="fighter-name" id="botPreviewName">Người Sắt</div>
+            <div class="fighter-role" id="botRoleLabel">Đối thủ Màn 1</div>
+          </div>
+        </div>
+
+        <div class="stats-box">
+          <div class="stat-item">
+            <span class="stat-label" id="startStageStatLabel">Màn hiện tại</span>
+            <span class="stat-value" id="startStageVal">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" id="startMaxStageLabel">Màn cao nhất</span>
+            <span class="stat-value" id="startMaxStageVal">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" id="startScoreLabel">Tổng điểm</span>
+            <span class="stat-value" id="startScoreVal">0</span>
+          </div>
+        </div>
+
+        <button id="startBtn" class="btn-primary" type="button">XUẤT PHÁT NGAY</button>
+      </div>
+    </div>
+
+    <!-- Màn hình Kết quả chặng đua -->
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="card">
+        <div class="badge-stage" id="resStageBadge">KẾT QUẢ VÒNG 1</div>
+        <h1 id="resultTitle">CHIẾN THẮNG!</h1>
+        <p class="sub" id="resultSub">Người Nhện đã vượt qua đối thủ!</p>
+
+        <div class="stats-box">
+          <div class="stat-item">
+            <span class="stat-label" id="resTimeLabel">Thời gian</span>
+            <span class="stat-value" id="resTimeVal">0.00s</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" id="resScoreLabel">Tổng điểm</span>
+            <span class="stat-value" id="resScoreVal">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" id="resNextBotLabel">Đối thủ kế</span>
+            <span class="stat-value" id="resNextBotVal">Thor</span>
+          </div>
+        </div>
+
+        <button id="nextStageBtn" class="btn-primary" type="button">QUA MÀN TIẾP THEO</button>
+        <button id="rerollBotBtn" class="btn-secondary" type="button">🎲 Đổi đối thủ siêu anh hùng khác</button>
+      </div>
+    </div>
+
+    <!-- Màn hình Tạm dừng -->
+    <div id="pauseOverlay" class="overlay hidden">
+      <div class="card">
+        <h1 id="pauseTitle">TẠM DỪNG</h1>
+        <p class="sub" id="pauseSub">Trò chơi đang tạm dừng.</p>
+        <button id="resumeBtn" class="btn-primary" type="button">TIẾP TỤC ĐUA</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* =====================================================================
+       * 1. LỚP TÍCH HỢP YOUTUBE PLAYABLES SDK & CHẾ ĐỘ DỰ PHÒNG AN TOÀN
+       * ===================================================================== */
+      const hasYTGame = typeof window.ytgame !== "undefined";
+      const inPlayablesEnv = Boolean(hasYTGame && window.ytgame.IN_PLAYABLES_ENV);
+
+      const SDK = {
+        isPlayables: inPlayablesEnv,
+
+        logError(err) {
+          try {
+            if (hasYTGame && window.ytgame.health && typeof window.ytgame.health.logError === "function") {
+              window.ytgame.health.logError();
+            }
+          } catch (_) {}
+          console.error("[TapSprint Error]", err);
+        },
+
+        logWarning(msg) {
+          try {
+            if (hasYTGame && window.ytgame.health && typeof window.ytgame.health.logWarning === "function") {
+              window.ytgame.health.logWarning();
+            }
+          } catch (_) {}
+          console.warn("[TapSprint Warning]", msg);
+        },
+
+        firstFrameReady() {
+          try {
+            if (hasYTGame && window.ytgame.game && typeof window.ytgame.game.firstFrameReady === "function") {
+              window.ytgame.game.firstFrameReady();
+            }
+          } catch (e) {
+            this.logError(e);
+          }
+        },
+
+        gameReady() {
+          try {
+            if (hasYTGame && window.ytgame.game && typeof window.ytgame.game.gameReady === "function") {
+              window.ytgame.game.gameReady();
+            }
+          } catch (e) {
+            this.logError(e);
+          }
+        },
+
+        isAudioEnabled() {
+          try {
+            if (hasYTGame && window.ytgame.system && typeof window.ytgame.system.isAudioEnabled === "function") {
+              return Boolean(window.ytgame.system.isAudioEnabled());
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+          return true;
+        },
+
+        onAudioEnabledChange(cb) {
+          try {
+            if (hasYTGame && window.ytgame.system && typeof window.ytgame.system.onAudioEnabledChange === "function") {
+              window.ytgame.system.onAudioEnabledChange((isEnabled) => cb(Boolean(isEnabled)));
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+        },
+
+        onPause(cb) {
+          try {
+            if (hasYTGame && window.ytgame.system && typeof window.ytgame.system.onPause === "function") {
+              window.ytgame.system.onPause(() => cb());
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+        },
+
+        onResume(cb) {
+          try {
+            if (hasYTGame && window.ytgame.system && typeof window.ytgame.system.onResume === "function") {
+              window.ytgame.system.onResume(() => cb());
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+        },
+
+        async getLanguage() {
+          try {
+            if (hasYTGame && window.ytgame.system && typeof window.ytgame.system.getLanguage === "function") {
+              const lang = await window.ytgame.system.getLanguage();
+              if (typeof lang === "string" && lang.length > 0) {
+                return lang.toLowerCase();
+              }
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+          return (navigator.language || "vi").toLowerCase();
+        },
+
+        async loadData() {
+          try {
+            if (inPlayablesEnv && window.ytgame.game && typeof window.ytgame.game.loadData === "function") {
+              const raw = await window.ytgame.game.loadData();
+              if (raw && typeof raw === "string") {
+                return JSON.parse(raw);
+              }
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+          try {
+            const localRaw = localStorage.getItem("spidey_sprint_save_v2");
+            return localRaw ? JSON.parse(localRaw) : null;
+          } catch (_) {
+            return null;
+          }
+        },
+
+        async saveData(payloadObj) {
+          // Không lưu ngôn ngữ vào cloud save theo chuẩn SDK
+          const serialized = JSON.stringify({
+            stage: Math.max(1, Number(payloadObj.stage) || 1),
+            maxStage: Math.max(1, Number(payloadObj.maxStage) || 1),
+            score: Math.max(0, Number(payloadObj.score) || 0),
+            bestTimeMs: payloadObj.bestTimeMs ? Number(payloadObj.bestTimeMs) : null
+          });
+          try {
+            if (inPlayablesEnv && window.ytgame.game && typeof window.ytgame.game.saveData === "function") {
+              await window.ytgame.game.saveData(serialized);
+            }
+          } catch (e) {
+            this.logError(e);
+          }
+          try {
+            localStorage.setItem("spidey_sprint_save_v2", serialized);
+          } catch (_) {}
+        },
+
+        async sendScore(scoreValue) {
+          try {
+            if (hasYTGame && window.ytgame.engagement && typeof window.ytgame.engagement.sendScore === "function") {
+              await window.ytgame.engagement.sendScore({ value: Math.max(0, Math.round(scoreValue)) });
+            }
+          } catch (e) {
+            this.logWarning(e);
+          }
+        }
+      };
+
+      /* =====================================================================
+       * 2. DANH SÁCH CÁC SIÊU ANH HÙNG ĐỐI THỦ (BOT NGẪU NHIÊN QUA TỪNG MÀN)
+       * ===================================================================== */
+      const SUPERHERO_BOTS = [
+        {
+          id: "ironman",
+          nameVi: "Người Sắt",
+          nameEn: "Iron Man",
+          shortEn: "IRON MAN",
+          emoji: "🤖",
+          primary: "#dc2626",
+          secondary: "#facc15",
+          trailColor: "#fb923c",
+          effectType: "jet",
+          paceBonus: 0.25
+        },
+        {
+          id: "hulk",
+          nameVi: "Người Khổng Lồ Xanh",
+          nameEn: "Hulk",
+          shortEn: "HULK",
+          emoji: "💚",
+          primary: "#16a34a",
+          secondary: "#7e22ce",
+          trailColor: "#4ade80",
+          effectType: "smash",
+          paceBonus: 0.1
+        },
+        {
+          id: "captain",
+          nameVi: "Đội Trưởng Mỹ",
+          nameEn: "Captain America",
+          shortEn: "CAPTAIN",
+          emoji: "🛡️",
+          primary: "#1d4ed8",
+          secondary: "#ef4444",
+          trailColor: "#60a5fa",
+          effectType: "shield",
+          paceBonus: 0.15
+        },
+        {
+          id: "thor",
+          nameVi: "Thần Sấm Thor",
+          nameEn: "Thor",
+          shortEn: "THOR",
+          emoji: "⚡",
+          primary: "#334155",
+          secondary: "#dc2626",
+          trailColor: "#38bdf8",
+          effectType: "lightning",
+          paceBonus: 0.3
+        },
+        {
+          id: "flash",
+          nameVi: "Tia Chớp Flash",
+          nameEn: "The Flash",
+          shortEn: "FLASH",
+          emoji: "⚡",
+          primary: "#b91c1c",
+          secondary: "#facc15",
+          trailColor: "#fde047",
+          effectType: "speedforce",
+          paceBonus: 0.45
+        },
+        {
+          id: "batman",
+          nameVi: "Người Dơi",
+          nameEn: "Batman",
+          shortEn: "BATMAN",
+          emoji: "🦇",
+          primary: "#1e293b",
+          secondary: "#facc15",
+          trailColor: "#94a3b8",
+          effectType: "cape",
+          paceBonus: 0.2
+        }
+      ];
+
+      /* =====================================================================
+       * 3. SONG NGỮ TIẾNG VIỆT & TIẾNG ANH (TỰ ĐỘNG THEO ytgame.system.getLanguage)
+       * ===================================================================== */
+      const I18N = {
+        vi: {
+          stageHud: "Màn:",
+          scoreHud: "Điểm:",
+          maxStageHud: "Kỷ lục màn:",
+          comboIdle: "🕸️ NHỊP TƠ NHỆN:",
+          comboRush: "⚡ SIÊU BỨT TỐC PHÓNG TƠ!",
+          tapBtn: "🕸️ BẮN TƠ CHẠY! (TAP)",
+          tapBtnRush: "⚡ PHÓNG TƠ SIÊU TỐC! (TAP)",
+          hint: "Chạm liên tục màn hình / nút bấm (hoặc phím Space / →) để Người Nhện bứt tốc!",
+          stageBadge: "VÒNG {n} • ĐƯỜNG ĐUA 100M",
+          title: "NGƯỜI NHỆN ĐUA TỐC ĐỘ",
+          desc: "Chạm thật nhanh và đều tay để kích hoạt Phóng Tơ Nhện đánh bại các siêu anh hùng!",
+          spideyName: "Người Nhện",
+          youRole: "Bạn điều khiển",
+          botRole: "Đối thủ Vòng {n}",
+          statStage: "Vòng hiện tại",
+          statMaxStage: "Vòng cao nhất",
+          statScore: "Tổng điểm",
+          startBtn: "XUẤT PHÁT NGAY",
+          resBadge: "KẾT QUẢ VÒNG {n}",
+          winTitle: "CHIẾN THẮNG! 🏆",
+          winSub: "Người Nhện đã đánh bại {bot} và mở khóa vòng tiếp theo!",
+          loseTitle: "CHƯA VƯỢT QUA 😅",
+          loseSub: "{bot} đã về đích trước! Hãy bấm nhanh hơn để phục thù!",
+          resTime: "Thời gian",
+          resScore: "Tổng điểm",
+          resNextBot: "Đối thủ kế",
+          nextStageBtn: "TIẾP TỤC VÒNG {n}",
+          retryStageBtn: "ĐUA LẠI VÒNG {n}",
+          rerollBtn: "🎲 Đổi siêu anh hùng đối thủ khác",
+          rerollToast: "Đã đổi đối thủ thành {bot}!",
+          pauseTitle: "TẠM DỪNG",
+          pauseSub: "Trò chơi đang tạm dừng bởi hệ thống.",
+          resumeBtn: "TIẾP TỤC ĐUA",
+          goText: "CHẠY!",
+          spideyTag: "NGƯỜI NHỆN",
+          audioOnToast: "Đã bật âm thanh",
+          audioOffToast: "Đã tắt âm thanh"
+        },
+        en: {
+          stageHud: "Stage:",
+          scoreHud: "Score:",
+          maxStageHud: "Best Stage:",
+          comboIdle: "🕸️ WEB RHYTHM:",
+          comboRush: "⚡ WEB-SLING TURBO RUSH!",
+          tapBtn: "🕸️ WEB SPRINT! (TAP)",
+          tapBtnRush: "⚡ TURBO WEB RUSH! (TAP)",
+          hint: "Tap rapidly on the screen / button (or Space / →) to boost Spider-Man!",
+          stageBadge: "STAGE {n} • 100M DASH",
+          title: "SPIDER-MAN TAP SPRINT",
+          desc: "Tap fast and keep the rhythm to trigger Web-Sling Rush and beat rival superheroes!",
+          spideyName: "Spider-Man",
+          youRole: "Player",
+          botRole: "Stage {n} Rival",
+          statStage: "Current Stage",
+          statMaxStage: "Max Stage",
+          statScore: "Total Score",
+          startBtn: "START RACE",
+          resBadge: "STAGE {n} RESULT",
+          winTitle: "VICTORY! 🏆",
+          winSub: "Spider-Man defeated {bot} and unlocked the next stage!",
+          loseTitle: "SO CLOSE 😅",
+          loseSub: "{bot} crossed first! Tap faster to win this stage!",
+          resTime: "Time",
+          resScore: "Total Score",
+          resNextBot: "Next Rival",
+          nextStageBtn: "NEXT: STAGE {n}",
+          retryStageBtn: "RETRY STAGE {n}",
+          rerollBtn: "🎲 Pick another superhero rival",
+          rerollToast: "New rival selected: {bot}!",
+          pauseTitle: "PAUSED",
+          pauseSub: "Game is paused by system.",
+          resumeBtn: "RESUME RACE",
+          goText: "GO!",
+          spideyTag: "SPIDER-MAN",
+          audioOnToast: "Sound enabled",
+          audioOffToast: "Sound muted"
+        }
+      };
+
+      let currentLang = "vi";
+
+      function t(key, vars = {}) {
+        let str = (I18N[currentLang] && I18N[currentLang][key]) || I18N.vi[key] || key;
+        for (const [k, v] of Object.entries(vars)) {
+          str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+        }
+        return str;
+      }
+
+      function getBotName(bot) {
+        if (!bot) return "";
+        return currentLang === "vi" ? bot.nameVi : bot.nameEn;
+      }
+
+      async function refreshLanguage() {
+        const langCode = await SDK.getLanguage();
+        currentLang = langCode.startsWith("en") ? "en" : "vi";
+        document.documentElement.lang = currentLang;
+        applyTranslations();
+      }
+
+      /* =====================================================================
+       * 4. ÂM THANH TỔNG HỢP WEB AUDIO API (BƯỚC CHÂN, PHÓNG TƠ, ĐẾM NGƯỢC)
+       * ===================================================================== */
+      const Sound = {
+        ctx: null,
+        enabled: SDK.isAudioEnabled(),
+        userMuted: false,
+
+        isEffectivelyEnabled() {
+          return this.enabled && !this.userMuted;
+        },
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === "suspended" && this.isEffectivelyEnabled()) {
+            this.ctx.resume().catch(() => {});
+          }
+        },
+
+        setSystemEnabled(flag) {
+          this.enabled = Boolean(flag);
+          updateAudioHUD();
+          if (!this.ctx) return;
+          if (this.isEffectivelyEnabled()) {
+            this.ctx.resume().catch(() => {});
+          } else {
+            this.ctx.suspend().catch(() => {});
+          }
+        },
+
+        toggleUserMute() {
+          this.userMuted = !this.userMuted;
+          updateAudioHUD();
+          if (this.isEffectivelyEnabled()) {
+            this.init();
+          } else if (this.ctx) {
+            this.ctx.suspend().catch(() => {});
+          }
+        },
+
+        playTone(freq, duration, type = "sine", gainVal = 0.1, slideTo = null) {
+          if (!this.isEffectivelyEnabled()) return;
+          this.init();
+          if (!this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (slideTo) {
+              osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+            }
+            gain.gain.setValueAtTime(gainVal, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + duration);
+          } catch (_) {}
+        },
+
+        stepAndWeb(isWebRush) {
+          // Tiếng bước chân trầm + tiếng bắn tơ "thwip" cao vút
+          this.playTone(130 + Math.random() * 25, 0.045, "triangle", 0.08, 75);
+          if (isWebRush) {
+            this.playTone(540 + Math.random() * 90, 0.09, "sine", 0.11, 1280);
+          } else {
+            this.playTone(340 + Math.random() * 50, 0.055, "sine", 0.06, 620);
+          }
+        },
+
+        countdown(isGo) {
+          if (isGo) {
+            this.playTone(880, 0.28, "square", 0.12, 1180);
+          } else {
+            this.playTone(440, 0.14, "sine", 0.11);
+          }
+        },
+
+        win() {
+          this.playTone(523.25, 0.12, "triangle", 0.14);
+          setTimeout(() => this.playTone(659.25, 0.12, "triangle", 0.14), 100);
+          setTimeout(() => this.playTone(783.99, 0.14, "triangle", 0.14), 200);
+          setTimeout(() => this.playTone(1046.5, 0.3, "triangle", 0.16), 300);
+        },
+
+        lose() {
+          this.playTone(310, 0.18, "sawtooth", 0.09, 210);
+          setTimeout(() => this.playTone(210, 0.28, "sawtooth", 0.09, 145), 170);
+        }
+      };
+
+      /* =====================================================================
+       * 5. TRẠNG THÁI TRÒ CHƠI & CHỌN SIÊU ANH HÙNG NGẪU NHIÊN
+       * ===================================================================== */
+      const TRACK_DISTANCE = 100; // 100m
+
+      const state = {
+        phase: "START", // START | COUNTDOWN | RACING | FINISHED
+        paused: false,
+        countdownTimer: 2.6,
+        lastCountdownInt: 4,
+        raceElapsedMs: 0,
+
+        stage: 1,
+        maxStage: 1,
+        score: 0,
+        bestTimeMs: null,
+
+        currentBot: SUPERHERO_BOTS[0],
+        lastBotId: null,
+
+        // Nhịp độ combo bấm liên tục (0 -> 100)
+        comboMeter: 0,
+        webLineTimer: 0,
+
+        player: {
+          dist: 0,
+          vel: 0,
+          stride: 0
+        },
+        bot: {
+          dist: 0,
+          vel: 0,
+          stride: 0,
+          targetPace: 10.2
+        },
+        particles: [],
+        cityBuildings: []
+      };
+
+      function pickRandomSuperheroBot() {
+        const candidates = SUPERHERO_BOTS.filter((b) => b.id !== state.lastBotId);
+        const pool = candidates.length > 0 ? candidates : SUPERHERO_BOTS;
+        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        state.currentBot = chosen;
+        state.lastBotId = chosen.id;
+        return chosen;
+      }
+
+      /* =====================================================================
+       * 6. THAM CHIẾU DOM & CẬP NHẬT GIAO DIỆN
+       * ===================================================================== */
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const el = {
+        hudStageLabel: document.getElementById("hudStageLabel"),
+        hudStage: document.getElementById("hudStage"),
+        hudScoreLabel: document.getElementById("hudScoreLabel"),
+        hudScore: document.getElementById("hudScore"),
+        hudMaxStageLabel: document.getElementById("hudMaxStageLabel"),
+        hudMaxStage: document.getElementById("hudMaxStage"),
+        audioToggleBtn: document.getElementById("audioToggleBtn"),
+        audioIcon: document.getElementById("audioIcon"),
+        hudAudio: document.getElementById("hudAudio"),
+        envDot: document.getElementById("envDot"),
+        envLabel: document.getElementById("envLabel"),
+        toastMsg: document.getElementById("toastMsg"),
+        comboFill: document.getElementById("comboFill"),
+        comboLabel: document.getElementById("comboLabel"),
+        tapBtn: document.getElementById("tapBtn"),
+        hintText: document.getElementById("hintText"),
+        startOverlay: document.getElementById("startOverlay"),
+        startStageBadge: document.getElementById("startStageBadge"),
+        titleText: document.getElementById("titleText"),
+        descText: document.getElementById("descText"),
+        spideyCardName: document.getElementById("spideyCardName"),
+        youRoleLabel: document.getElementById("youRoleLabel"),
+        botPreviewAvatar: document.getElementById("botPreviewAvatar"),
+        botPreviewName: document.getElementById("botPreviewName"),
+        botRoleLabel: document.getElementById("botRoleLabel"),
+        startStageStatLabel: document.getElementById("startStageStatLabel"),
+        startStageVal: document.getElementById("startStageVal"),
+        startMaxStageLabel: document.getElementById("startMaxStageLabel"),
+        startMaxStageVal: document.getElementById("startMaxStageVal"),
+        startScoreLabel: document.getElementById("startScoreLabel"),
+        startScoreVal: document.getElementById("startScoreVal"),
+        startBtn: document.getElementById("startBtn"),
+        resultOverlay: document.getElementById("resultOverlay"),
+        resStageBadge: document.getElementById("resStageBadge"),
+        resultTitle: document.getElementById("resultTitle"),
+        resultSub: document.getElementById("resultSub"),
+        resTimeLabel: document.getElementById("resTimeLabel"),
+        resTimeVal: document.getElementById("resTimeVal"),
+        resScoreLabel: document.getElementById("resScoreLabel"),
+        resScoreVal: document.getElementById("resScoreVal"),
+        resNextBotLabel: document.getElementById("resNextBotLabel"),
+        resNextBotVal: document.getElementById("resNextBotVal"),
+        nextStageBtn: document.getElementById("nextStageBtn"),
+        rerollBotBtn: document.getElementById("rerollBotBtn"),
+        pauseOverlay: document.getElementById("pauseOverlay"),
+        pauseTitle: document.getElementById("pauseTitle"),
+        pauseSub: document.getElementById("pauseSub"),
+        resumeBtn: document.getElementById("resumeBtn")
+      };
+
+      function showToast(msg) {
+        el.toastMsg.textContent = msg;
+        el.toastMsg.classList.add("show");
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(() => {
+          el.toastMsg.classList.remove("show");
+        }, 2100);
+      }
+
+      function updateAudioHUD() {
+        const active = Sound.isEffectivelyEnabled();
+        el.audioIcon.textContent = active ? "🔊" : "🔇";
+        el.hudAudio.textContent = active ? "ON" : "OFF";
+      }
+
+      function updatePreviewCards() {
+        const bot = state.currentBot;
+        el.hudStage.textContent = String(state.stage);
+        el.hudScore.textContent = String(state.score);
+        el.hudMaxStage.textContent = String(state.maxStage);
+
+        el.startStageBadge.textContent = t("stageBadge", { n: state.stage });
+        el.botPreviewAvatar.textContent = bot.emoji;
+        el.botPreviewAvatar.style.background = `linear-gradient(135deg, ${bot.primary}, ${bot.secondary})`;
+        el.botPreviewName.textContent = getBotName(bot);
+        el.botRoleLabel.textContent = t("botRole", { n: state.stage });
+
+        el.startStageVal.textContent = String(state.stage);
+        el.startMaxStageVal.textContent = String(state.maxStage);
+        el.startScoreVal.textContent = String(state.score);
+        el.resNextBotVal.textContent = getBotName(bot);
+      }
+
+      function applyTranslations() {
+        el.hudStageLabel.textContent = t("stageHud");
+        el.hudScoreLabel.textContent = t("scoreHud");
+        el.hudMaxStageLabel.textContent = t("maxStageHud");
+        el.hintText.textContent = t("hint");
+        el.titleText.textContent = t("title");
+        el.descText.textContent = t("desc");
+        el.spideyCardName.textContent = t("spideyName");
+        el.youRoleLabel.textContent = t("youRole");
+        el.startStageStatLabel.textContent = t("statStage");
+        el.startMaxStageLabel.textContent = t("statMaxStage");
+        el.startScoreLabel.textContent = t("statScore");
+        el.startBtn.textContent = t("startBtn");
+        el.resTimeLabel.textContent = t("resTime");
+        el.resScoreLabel.textContent = t("resScore");
+        el.resNextBotLabel.textContent = t("resNextBot");
+        el.rerollBotBtn.textContent = t("rerollBtn");
+        el.pauseTitle.textContent = t("pauseTitle");
+        el.pauseSub.textContent = t("pauseSub");
+        el.resumeBtn.textContent = t("resumeBtn");
+        updateComboUI();
+        updatePreviewCards();
+      }
+
+      function updateComboUI() {
+        const pct = Math.round(state.comboMeter);
+        const isWebRush = state.comboMeter >= 70;
+        el.comboFill.style.width = pct + "%";
+        el.comboLabel.textContent = isWebRush ? t("comboRush") : `${t("comboIdle")} ${pct}%`;
+        el.tapBtn.classList.toggle("web-rush", isWebRush);
+        el.tapBtn.textContent = isWebRush ? t("tapBtnRush") : t("tapBtn");
+      }
+
+      /* =====================================================================
+       * 7. ĐIỀU KHIỂN ĐƯỜNG ĐUA & CƠ CHẾ PHÓNG TƠ NHỆN BỨT TỐC
+       * ===================================================================== */
+      function startStageRace() {
+        state.phase = "COUNTDOWN";
+        state.countdownTimer = 2.5;
+        state.lastCountdownInt = 4;
+        state.raceElapsedMs = 0;
+        state.comboMeter = 0;
+        state.webLineTimer = 0;
+
+        state.player.dist = 0;
+        state.player.vel = 0;
+        state.player.stride = 0;
+
+        state.bot.dist = 0;
+        state.bot.vel = 0;
+        state.bot.stride = 0;
+        // Tốc độ Bot tăng dần theo cấp độ màn chơi + chỉ số riêng của từng siêu anh hùng
+        const baseStagePace = 9.8 + Math.min(4.6, (state.stage - 1) * 0.36);
+        state.bot.targetPace = baseStagePace + state.currentBot.paceBonus;
+
+        state.particles = [];
+        updateComboUI();
+
+        el.startOverlay.classList.add("hidden");
+        el.resultOverlay.classList.add("hidden");
+      }
+
+      function spawnRunnerParticles(dist, laneIndex, color, count) {
+        for (let i = 0; i < count; i++) {
+          state.particles.push({
+            dist,
+            lane: laneIndex,
+            vx: -2.0 - Math.random() * 3.5,
+            offsetY: (Math.random() - 0.5) * 18,
+            size: 2.5 + Math.random() * 3,
+            color,
+            life: 0.3 + Math.random() * 0.22,
+            maxLife: 0.52
+          });
+        }
+      }
+
+      function handleTapInput() {
+        if (state.paused) return;
+        Sound.init();
+
+        if (state.phase !== "RACING") return;
+
+        // Tăng thanh nhịp độ combo khi bấm đều tay
+        state.comboMeter = Math.min(100, state.comboMeter + 13);
+        const isWebRush = state.comboMeter >= 70;
+        const rushMultiplier = isWebRush ? 1.24 : 1.0;
+
+        // Cộng xung lực bứt tốc cho Người Nhện
+        state.player.vel = Math.min(19.5 * rushMultiplier, state.player.vel + 2.5 * rushMultiplier);
+        if (isWebRush) {
+          state.webLineTimer = 0.22;
+        }
+
+        Sound.stepAndWeb(isWebRush);
+        updateComboUI();
+
+        // Hiệu ứng nút bấm
+        el.tapBtn.classList.add("pressed");
+        setTimeout(() => el.tapBtn.classList.remove("pressed"), 60);
+
+        // Hạt năng lượng / tơ nhện phía sau Người Nhện
+        spawnRunnerParticles(
+          state.player.dist,
+          0,
+          isWebRush ? "#38bdf8" : "#f8fafc",
+          isWebRush ? 5 : 3
+        );
+      }
+
+      async function finishRace(playerWon) {
+        state.phase = "FINISHED";
+        const finishMs = Math.round(state.raceElapsedMs);
+        const finishedStage = state.stage;
+        const defeatedOrRivalBot = state.currentBot;
+
+        if (playerWon) {
+          Sound.win();
+          const stagePoints = Math.max(150, Math.round((180000 / Math.max(3000, finishMs)) + finishedStage * 120));
+          state.score += stagePoints;
+          state.stage += 1;
+          if (state.stage > state.maxStage) {
+            state.maxStage = state.stage;
+          }
+          if (!state.bestTimeMs || finishMs < state.bestTimeMs) {
+            state.bestTimeMs = finishMs;
+          }
+
+          // Chọn ngẫu nhiên siêu anh hùng mới cho màn tiếp theo
+          pickRandomSuperheroBot();
+
+          await SDK.saveData({
+            stage: state.stage,
+            maxStage: state.maxStage,
+            score: state.score,
+            bestTimeMs: state.bestTimeMs
+          });
+          await SDK.sendScore(state.score);
+        } else {
+          Sound.lose();
+        }
+
+        updatePreviewCards();
+
+        el.resStageBadge.textContent = t("resBadge", { n: finishedStage });
+        el.resultTitle.textContent = playerWon ? t("winTitle") : t("loseTitle");
+        el.resultSub.textContent = playerWon
+          ? t("winSub", { bot: getBotName(defeatedOrRivalBot) })
+          : t("loseSub", { bot: getBotName(defeatedOrRivalBot) });
+        el.resTimeVal.textContent = (finishMs / 1000).toFixed(2) + "s";
+        el.resScoreVal.textContent = String(state.score);
+        el.resNextBotVal.textContent = getBotName(state.currentBot);
+        el.nextStageBtn.textContent = playerWon
+          ? t("nextStageBtn", { n: state.stage })
+          : t("retryStageBtn", { n: state.stage });
+
+        el.resultOverlay.classList.remove("hidden");
+      }
+
+      /* =====================================================================
+       * 8. VẼ ĐỒ HỌA VECTOR CANVAS 2D (THÀNH PHỐ, NGƯỜI NHỆN & SIÊU ANH HÙNG)
+       * ===================================================================== */
+      let viewWidth = 0;
+      let viewHeight = 0;
+
+      function generateCitySkyline() {
+        const buildings = [];
+        let x = -20;
+        while (x < 2400) {
+          const w = 46 + Math.random() * 54;
+          const h = 70 + Math.random() * 130;
+          const windows = [];
+          for (let wy = 14; wy < h - 16; wy += 18) {
+            for (let wx = 10; wx < w - 12; wx += 14) {
+              if (Math.random() > 0.35) {
+                windows.push({ wx, wy, lit: Math.random() > 0.45 });
+              }
+            }
+          }
+          buildings.push({ x, w, h, windows });
+          x += w + 6;
+        }
+        state.cityBuildings = buildings;
+      }
+
+      function resizeCanvas() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        viewWidth = window.innerWidth;
+        viewHeight = window.innerHeight;
+        canvas.width = Math.floor(viewWidth * dpr);
+        canvas.height = Math.floor(viewHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+
+      // Vẽ nhân vật Người Nhện (Spider-Man) chi tiết bằng vector Canvas
+      function drawSpiderMan(x, y, stridePhase, isWebRush, webLineTimer, finishX) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Hiệu ứng bắn tơ nhện về phía trước khi bứt tốc
+        if (webLineTimer > 0 && x < finishX) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.92)";
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(14, -10);
+          ctx.lineTo(Math.min(finishX - x + 20, 150), -34);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Vòng hào quang tốc độ khi kích hoạt Web Rush
+        if (isWebRush) {
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(0, -2, 30, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Bóng đổ
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(0, 27, 17, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const swing = Math.sin(stridePhase) * 0.85;
+        const bob = Math.abs(Math.cos(stridePhase)) * -4.5;
+        ctx.translate(0, bob);
+        ctx.lineCap = "round";
+
+        // Chân sau (Xanh dương + Bốt đỏ)
+        ctx.strokeStyle = "#1d4ed8";
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.moveTo(-1, 6);
+        ctx.lineTo(Math.sin(-swing) * 15, 24);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.moveTo(Math.sin(-swing) * 10, 17);
+        ctx.lineTo(Math.sin(-swing) * 15, 24);
+        ctx.stroke();
+
+        // Thân người (Giáp đỏ sọc xanh)
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 7.5;
+        ctx.beginPath();
+        ctx.moveTo(-2, 6);
+        ctx.lineTo(5, -10);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#1d4ed8";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-3, 5);
+        ctx.lineTo(2, -8);
+        ctx.stroke();
+
+        // Chân trước (Xanh dương + Bốt đỏ)
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 6);
+        ctx.lineTo(Math.sin(swing) * 16, 24);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.moveTo(Math.sin(swing) * 11, 17);
+        ctx.lineTo(Math.sin(swing) * 16, 24);
+        ctx.stroke();
+
+        // Tay đánh nhịp / vươn tay bắn tơ
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(4, -8);
+        if (webLineTimer > 0) {
+          ctx.lineTo(18, -12);
+        } else {
+          ctx.lineTo(4 + Math.sin(-swing) * 14, 4);
+        }
+        ctx.stroke();
+
+        // Đầu mặt nạ Người Nhện màu đỏ
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(7, -19, 8.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Họa tiết mạng nhện nhẹ trên đầu
+        ctx.strokeStyle = "rgba(127, 29, 29, 0.55)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(7, -27);
+        ctx.lineTo(7, -11);
+        ctx.moveTo(-1, -19);
+        ctx.lineTo(15, -19);
+        ctx.stroke();
+
+        // Đôi mắt trắng viền đen đặc trưng của Người Nhện
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(10.5, -19.5, 4.2, 2.3, -0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Nhãn tên phía trên
+        ctx.font = "900 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillText(t("spideyTag"), 5, -34);
+
+        ctx.restore();
+      }
+
+      // Vẽ đối thủ siêu anh hùng ngẫu nhiên (Iron Man, Hulk, Captain, Thor, Flash, Batman)
+      function drawSuperheroBot(x, y, stridePhase, bot) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        const isHulk = bot.id === "hulk";
+        const scale = isHulk ? 1.22 : 1.0;
+
+        // Bóng đổ
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(0, 27, 17 * scale, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.scale(scale, scale);
+
+        const swing = Math.sin(stridePhase) * 0.8;
+        const bob = Math.abs(Math.cos(stridePhase)) * -4;
+        ctx.translate(0, bob);
+        ctx.lineCap = "round";
+
+        // Áo choàng bay phía sau cho Thor và Batman
+        if (bot.id === "thor" || bot.id === "batman") {
+          ctx.fillStyle = bot.id === "thor" ? "#dc2626" : "#0f172a";
+          ctx.beginPath();
+          ctx.moveTo(2, -11);
+          ctx.lineTo(-22 - Math.sin(stridePhase * 1.5) * 4, 4);
+          ctx.lineTo(-14, 12);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Tia phản lực chân Iron Man hoặc tia chớp Flash
+        if (bot.id === "ironman") {
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(-8, 12, 4 + Math.random() * 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (bot.id === "flash" || bot.id === "thor") {
+          ctx.strokeStyle = bot.id === "flash" ? "#facc15" : "#38bdf8";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-6, -4);
+          ctx.lineTo(-18, -10);
+          ctx.lineTo(-13, -2);
+          ctx.lineTo(-24, 2);
+          ctx.stroke();
+        }
+
+        // Chân sau
+        ctx.strokeStyle = bot.secondary;
+        ctx.lineWidth = isHulk ? 7 : 5.2;
+        ctx.beginPath();
+        ctx.moveTo(-1, 6);
+        ctx.lineTo(Math.sin(-swing) * 15, 24);
+        ctx.stroke();
+
+        // Thân người
+        ctx.strokeStyle = bot.primary;
+        ctx.lineWidth = isHulk ? 10.5 : 7.5;
+        ctx.beginPath();
+        ctx.moveTo(-2, 6);
+        ctx.lineTo(5, -10);
+        ctx.stroke();
+
+        // Chi tiết ngực (Lò phản ứng hồ quang Iron Man / Biểu tượng Flash / Ngôi sao Captain)
+        if (bot.id === "ironman") {
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(4, -5, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (bot.id === "flash") {
+          ctx.fillStyle = "#facc15";
+          ctx.beginPath();
+          ctx.arc(4, -5, 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Chân trước
+        ctx.strokeStyle = bot.primary;
+        ctx.lineWidth = isHulk ? 7 : 5.2;
+        ctx.beginPath();
+        ctx.moveTo(0, 6);
+        ctx.lineTo(Math.sin(swing) * 16, 24);
+        ctx.stroke();
+
+        // Tay đánh nhịp & Vũ khí đặc trưng
+        ctx.strokeStyle = bot.secondary;
+        ctx.lineWidth = isHulk ? 6 : 4.5;
+        const handX = 4 + Math.sin(-swing) * 14;
+        const handY = 3;
+        ctx.beginPath();
+        ctx.moveTo(4, -8);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+
+        // Khiên Captain America
+        if (bot.id === "captain") {
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.arc(handX + 2, handY, 7.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(handX + 2, handY, 4.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#1d4ed8";
+          ctx.beginPath();
+          ctx.arc(handX + 2, handY, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Búa Mjolnir của Thor
+        if (bot.id === "thor") {
+          ctx.fillStyle = "#94a3b8";
+          ctx.fillRect(handX + 1, handY - 6, 9, 6);
+        }
+
+        // Đầu nhân vật
+        ctx.fillStyle = bot.id === "thor" || bot.id === "captain" ? "#fed7aa" : bot.primary;
+        ctx.beginPath();
+        ctx.arc(7, -19, 8.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mũ / Mặt nạ đặc trưng
+        if (bot.id === "ironman") {
+          ctx.fillStyle = "#facc15";
+          ctx.fillRect(7, -23, 7, 7);
+          ctx.fillStyle = "#38bdf8";
+          ctx.fillRect(9, -21, 4, 2);
+        } else if (bot.id === "batman") {
+          ctx.fillStyle = "#0f172a";
+          ctx.beginPath();
+          ctx.arc(7, -19, 8.6, 0, Math.PI * 2);
+          ctx.fill();
+          // Tai dơi nhọn
+          ctx.beginPath();
+          ctx.moveTo(3, -26);
+          ctx.lineTo(4, -33);
+          ctx.lineTo(7, -26);
+          ctx.moveTo(8, -26);
+          ctx.lineTo(9, -33);
+          ctx.lineTo(12, -26);
+          ctx.fill();
+        } else if (bot.id === "thor") {
+          // Tóc vàng Thor
+          ctx.fillStyle = "#facc15";
+          ctx.fillRect(0, -26, 12, 5);
+        } else if (bot.id === "captain") {
+          // Mũ xanh Captain
+          ctx.fillStyle = "#1d4ed8";
+          ctx.beginPath();
+          ctx.arc(7, -20, 8.6, Math.PI, 0);
+          ctx.fill();
+        } else if (bot.id === "flash") {
+          // Cánh tia sét bên tai Flash
+          ctx.fillStyle = "#facc15";
+          ctx.beginPath();
+          ctx.moveTo(5, -20);
+          ctx.lineTo(-1, -26);
+          ctx.lineTo(4, -18);
+          ctx.fill();
+        }
+
+        // Nhãn tên siêu anh hùng đối thủ
+        ctx.font = "900 10.5px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fca5a5";
+        ctx.fillText(bot.shortEn, 5, -35 / scale);
+
+        ctx.restore();
+      }
+
+      function render() {
+        // 1. Bầu trời đêm thành phố siêu anh hùng
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, viewHeight);
+        skyGrad.addColorStop(0, "#090d16");
+        skyGrad.addColorStop(0.38, "#1e1b4b");
+        skyGrad.addColorStop(0.55, "#0f172a");
+        skyGrad.addColorStop(1, "#020617");
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+        const trackTop = Math.max(84, viewHeight * 0.28);
+        const trackHeight = Math.min(220, viewHeight * 0.36);
+        const laneHeight = trackHeight / 2;
+
+        // 2. Đường chân trời các tòa nhà chọc trời (cuộn parallax theo tiến độ chạy)
+        const parallaxOffset = (state.player.dist * 6) % 900;
+        ctx.save();
+        for (const b of state.cityBuildings) {
+          const bx = b.x - parallaxOffset;
+          if (bx + b.w < 0 || bx > viewWidth) continue;
+          const by = trackTop - b.h;
+          ctx.fillStyle = "#111827";
+          ctx.fillRect(bx, by, b.w, b.h);
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.14)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bx, by, b.w, b.h);
+
+          for (const win of b.windows) {
+            ctx.fillStyle = win.lit ? "rgba(253, 224, 71, 0.32)" : "rgba(30, 41, 59, 0.5)";
+            ctx.fillRect(bx + win.wx, by + win.wy, 6, 9);
+          }
+        }
+        ctx.restore();
+
+        // 3. Mặt đường đua năng lượng thành phố
+        const roadGrad = ctx.createLinearGradient(0, trackTop, 0, trackTop + trackHeight);
+        roadGrad.addColorStop(0, "#1e293b");
+        roadGrad.addColorStop(0.5, "#334155");
+        roadGrad.addColorStop(1, "#1e293b");
+        ctx.fillStyle = roadGrad;
+        ctx.fillRect(0, trackTop, viewWidth, trackHeight);
+
+        // Dải đèn neon biên đường
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, trackTop);
+        ctx.lineTo(viewWidth, trackTop);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.moveTo(0, trackTop + trackHeight);
+        ctx.lineTo(viewWidth, trackTop + trackHeight);
+        ctx.stroke();
+
+        // Vạch phân làn giữa 2 siêu anh hùng
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+        ctx.setLineDash([16, 14]);
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, trackTop + laneHeight);
+        ctx.lineTo(viewWidth, trackTop + laneHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Tọa độ xuất phát & vạch đích 100m
+        const startX = Math.max(52, viewWidth * 0.13);
+        const finishX = viewWidth - Math.max(52, viewWidth * 0.13);
+        const spanX = Math.max(60, finishX - startX);
+
+        // Vạch mốc mỗi 20m
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        for (let m = 0; m <= TRACK_DISTANCE; m += 20) {
+          const mx = startX + (m / TRACK_DISTANCE) * spanX;
+          ctx.strokeStyle = m === 0 || m === TRACK_DISTANCE ? "#ffffff" : "rgba(255, 255, 255, 0.22)";
+          ctx.lineWidth = m === TRACK_DISTANCE ? 4 : 1.5;
+          ctx.beginPath();
+          ctx.moveTo(mx, trackTop);
+          ctx.lineTo(mx, trackTop + trackHeight);
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
+          ctx.fillText(m + "m", mx, trackTop - 7);
+        }
+
+        // Cờ caro ở vạch đích
+        const checkSize = 8;
+        const rows = Math.floor(trackHeight / checkSize);
+        for (let r = 0; r < rows; r++) {
+          ctx.fillStyle = r % 2 === 0 ? "#ffffff" : "#090d16";
+          ctx.fillRect(finishX - checkSize / 2, trackTop + r * checkSize, checkSize, checkSize);
+        }
+
+        // 4. Hạt hiệu ứng tốc độ của cả 2 nhân vật
+        for (const p of state.particles) {
+          const px = startX + (p.dist / TRACK_DISTANCE) * spanX;
+          const baseLaneY = p.lane === 0 ? trackTop + laneHeight * 0.58 : trackTop + laneHeight * 1.58;
+          const py = baseLaneY + 12 + p.offsetY;
+          const alpha = Math.max(0, p.life / p.maxLife);
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(px, py, p.size * alpha, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // 5. Vẽ Người Nhện (Làn trên) & Siêu Anh Hùng Bot (Làn dưới)
+        const isWebRush = state.comboMeter >= 70;
+        const playerX = startX + (Math.min(TRACK_DISTANCE, state.player.dist) / TRACK_DISTANCE) * spanX;
+        const playerY = trackTop + laneHeight * 0.58;
+        drawSpiderMan(playerX, playerY, state.player.stride, isWebRush, state.webLineTimer, finishX);
+
+        const botX = startX + (Math.min(TRACK_DISTANCE, state.bot.dist) / TRACK_DISTANCE) * spanX;
+        const botY = trackTop + laneHeight * 1.58;
+        drawSuperheroBot(botX, botY, state.bot.stride, state.currentBot);
+
+        // 6. Thanh tiến trình đường đua phía trên đường chạy
+        const barW = Math.min(viewWidth - 28, 430);
+        const barX = (viewWidth - barW) / 2;
+        const barY = trackTop - 46;
+
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, 24, 12);
+        ctx.fill();
+
+        const pct = Math.min(1, state.player.dist / TRACK_DISTANCE);
+        ctx.fillStyle = isWebRush ? "#38bdf8" : "#ef4444";
+        ctx.beginPath();
+        ctx.roundRect(barX + 3, barY + 3, Math.max(12, (barW - 6) * pct), 18, 9);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11.5px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          `🕷️ ${Math.min(100, state.player.dist).toFixed(1)}m   •   ${(state.raceElapsedMs / 1000).toFixed(2)}s   •   ${state.currentBot.emoji} ${Math.min(100, state.bot.dist).toFixed(1)}m`,
+          viewWidth / 2,
+          barY + 16
+        );
+
+        // 7. Hiệu ứng đếm ngược 3 - 2 - 1 - CHẠY!
+        if (state.phase === "COUNTDOWN") {
+          const num = Math.ceil(state.countdownTimer);
+          const label = num > 0 ? String(num) : t("goText");
+          ctx.fillStyle = "rgba(9, 13, 22, 0.45)";
+          ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+          ctx.font = "900 76px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillStyle = num > 0 ? "#fbbf24" : "#22c55e";
+          ctx.fillText(label, viewWidth / 2, trackTop + trackHeight / 2 + 26);
+        }
+      }
+
+      /* =====================================================================
+       * 9. VÒNG LẶP CẬP NHẬT CHÍNH (REQUESTANIMATIONFRAME)
+       * ===================================================================== */
+      let lastFrameTime = performance.now();
+
+      function update(dt) {
+        if (state.paused) return;
+
+        if (state.phase === "COUNTDOWN") {
+          state.countdownTimer -= dt;
+          const currentInt = Math.ceil(state.countdownTimer);
+          if (currentInt !== state.lastCountdownInt && currentInt >= 1) {
+            state.lastCountdownInt = currentInt;
+            Sound.countdown(false);
+          }
+          if (state.countdownTimer <= 0) {
+            Sound.countdown(true);
+            state.phase = "RACING";
+          }
+          return;
+        }
+
+        if (state.phase === "RACING") {
+          state.raceElapsedMs += dt * 1000;
+
+          // Giảm dần thanh nhịp độ combo nếu ngừng bấm
+          if (state.comboMeter > 0) {
+            state.comboMeter = Math.max(0, state.comboMeter - dt * 36);
+            updateComboUI();
+          }
+
+          if (state.webLineTimer > 0) {
+            state.webLineTimer = Math.max(0, state.webLineTimer - dt);
+          }
+
+          // Vật lý Người Nhện
+          state.player.vel *= Math.pow(0.28, dt);
+          if (state.player.vel < 0.05) state.player.vel = 0;
+          state.player.dist += state.player.vel * dt;
+          state.player.stride += state.player.vel * dt * 1.45;
+
+          // AI Siêu Anh Hùng Bot chạy theo nhịp điệu & tỏa hiệu ứng đặc trưng
+          const wave = Math.sin(state.raceElapsedMs * 0.0055) * 0.85;
+          const desiredBotVel = state.bot.targetPace + wave;
+          state.bot.vel += (desiredBotVel - state.bot.vel) * Math.min(1, dt * 3.2);
+          state.bot.dist += state.bot.vel * dt;
+          state.bot.stride += state.bot.vel * dt * 1.45;
+
+          if (Math.random() < dt * 18) {
+            spawnRunnerParticles(state.bot.dist, 1, state.currentBot.trailColor, 1);
+          }
+
+          // Cập nhật hạt bụi / tia lửa / sấm sét
+          for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.dist += p.vx * dt;
+            p.life -= dt;
+            if (p.life <= 0) {
+              state.particles.splice(i, 1);
+            }
+          }
+
+          // Kiểm tra cán đích 100m
+          if (state.player.dist >= TRACK_DISTANCE || state.bot.dist >= TRACK_DISTANCE) {
+            const playerWon = state.player.dist >= state.bot.dist;
+            finishRace(playerWon);
+          }
+        }
+      }
+
+      function gameLoop(now) {
+        const dt = Math.min(0.05, Math.max(0, (now - lastFrameTime) / 1000));
+        lastFrameTime = now;
+
+        update(dt);
+        render();
+        requestAnimationFrame(gameLoop);
+      }
+
+      /* =====================================================================
+       * 10. GẮN SỰ KIỆN TƯƠNG TÁC & VÒNG ĐỜI PLAYABLES SDK
+       * ===================================================================== */
+      el.startBtn.addEventListener("click", () => {
+        Sound.init();
+        startStageRace();
+      });
+
+      el.nextStageBtn.addEventListener("click", () => {
+        Sound.init();
+        startStageRace();
+      });
+
+      el.rerollBotBtn.addEventListener("click", () => {
+        const newBot = pickRandomSuperheroBot();
+        updatePreviewCards();
+        showToast(t("rerollToast", { bot: getBotName(newBot) }));
+      });
+
+      el.audioToggleBtn.addEventListener("click", () => {
+        Sound.toggleUserMute();
+        showToast(Sound.isEffectivelyEnabled() ? t("audioOnToast") : t("audioOffToast"));
+      });
+
+      el.resumeBtn.addEventListener("click", () => {
+        state.paused = false;
+        lastFrameTime = performance.now();
+        el.pauseOverlay.classList.add("hidden");
+        if (Sound.isEffectivelyEnabled() && Sound.ctx) {
+          Sound.ctx.resume().catch(() => {});
+        }
+      });
+
+      // Bấm vào nút TAP hoặc chạm trực tiếp vào màn hình đường đua đều tính
+      el.tapBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        handleTapInput();
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        handleTapInput();
+      });
+
+      // Hỗ trợ bàn phím trên máy tính (Space hoặc Mũi tên phải)
+      window.addEventListener("keydown", (e) => {
+        if (e.repeat) return;
+        if (e.code === "Space" || e.code === "ArrowRight") {
+          if (state.phase === "RACING") {
+            e.preventDefault();
+            handleTapInput();
+          }
+        }
+      });
+
+      // Đồng bộ âm thanh từ hệ thống YouTube Playables
+      SDK.onAudioEnabledChange((isEnabled) => {
+        Sound.setSystemEnabled(isEnabled);
+      });
+
+      // Tạm dừng sạch sẽ khi nhận ytgame.system.onPause() hoặc chuyển tab
+      function pauseGameBySystem() {
+        state.paused = true;
+        if (Sound.ctx) {
+          Sound.ctx.suspend().catch(() => {});
+        }
+        if (state.phase === "RACING" || state.phase === "COUNTDOWN") {
+          el.pauseOverlay.classList.remove("hidden");
+        }
+      }
+
+      SDK.onPause(pauseGameBySystem);
+
+      SDK.onResume(() => {
+        state.paused = false;
+        lastFrameTime = performance.now();
+        el.pauseOverlay.classList.add("hidden");
+        if (Sound.isEffectivelyEnabled() && Sound.ctx) {
+          Sound.ctx.resume().catch(() => {});
+        }
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          pauseGameBySystem();
+        } else {
+          refreshLanguage();
+        }
+      });
+
+      /* =====================================================================
+       * 11. KHỞI TẠO ỨNG DỤNG & BÁO FIRSTFRAMEREADY / GAMEREADY
+       * ===================================================================== */
+      async function bootstrap() {
+        generateCitySkyline();
+        resizeCanvas();
+
+        if (SDK.isPlayables) {
+          el.envDot.classList.remove("local");
+          el.envLabel.textContent = "YT SDK";
+        } else {
+          el.envDot.classList.add("local");
+          el.envLabel.textContent = "WEB";
+        }
+
+        updateAudioHUD();
+        pickRandomSuperheroBot();
+
+        // Vẽ khung hình đầu tiên và báo firstFrameReady()
+        render();
+        SDK.firstFrameReady();
+
+        // Tải ngôn ngữ & dữ liệu lưu trữ người chơi
+        await refreshLanguage();
+        const saved = await SDK.loadData();
+        if (saved) {
+          state.stage = Math.max(1, Number(saved.stage) || 1);
+          state.maxStage = Math.max(state.stage, Number(saved.maxStage) || 1);
+          state.score = Math.max(0, Number(saved.score) || 0);
+          state.bestTimeMs = saved.bestTimeMs ? Number(saved.bestTimeMs) : null;
+        }
+        updatePreviewCards();
+
+        // Bắt đầu vòng lặp chính và báo gameReady()
+        lastFrameTime = performance.now();
+        requestAnimationFrame(gameLoop);
+        SDK.gameReady();
+      }
+
+      bootstrap().catch((err) => SDK.logError(err));
+    })();
+  </script>
+</body>
+</html>
